@@ -3,6 +3,9 @@ import Button from '@mui/material/Button';
 import MuiCard from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
 import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
+import { useGuestLogin } from '../../app/apis/account/useLogin';
+import type { GuestLoginResponse } from '../../app/apis/account/LoginRouter';
 import { GoogleIcon, SitemarkIcon, GitIcon } from './CustomIcons';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -24,6 +27,24 @@ const Card = styled(MuiCard)(({ theme }) => ({
 }));
 
 export default function SignInCard() {
+  const navigate = useNavigate();
+  const { mutate: signInAsGuest, isPending } = useGuestLogin({
+    onSuccess: (data: GuestLoginResponse) => {
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      alert('Guest 로그인 성공');
+      console.info('Guest 로그인 응답', data);
+      navigate('/main');
+    },
+    onError: (error: unknown) => {
+      console.error('Guest 로그인 실패', error);
+      alert('게스트 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    },
+  });
+
+  const handleGuestLogin = () => {
+    signInAsGuest();
+  };
 
   return (
     <Card variant="outlined" style={{padding:'80px 20px'}}>
@@ -58,9 +79,10 @@ export default function SignInCard() {
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => alert('Guest로 로그인')}
+          onClick={handleGuestLogin}
+          disabled={isPending}
         >
-          Guest로 로그인
+          {isPending ? '로그인 중...' : 'Guest로 로그인'}
         </Button>
       </Box>
     </Card>
