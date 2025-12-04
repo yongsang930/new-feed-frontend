@@ -1,15 +1,23 @@
 export const HomeRouter = {
   posts: {
     method: 'GET',
-    path: '/api/posts',
+    path: '/api/posts/search',
   },
   keywords: {
     method: 'GET',
     path: '/api/keywords',
   },
-  me: {
+  userKeywords: {
     method: 'GET',
-    path: '/api/user/me',
+    path: '/api/user/keywords',
+  },
+  updateUserKeywords: {
+    method: 'POST',
+    path: '/api/user/keywords',
+  },
+  recommendKeywords: {
+    method: 'POST',
+    path: '/api/keywords/custom',
   },
 } as const;
 

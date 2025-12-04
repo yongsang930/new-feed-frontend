@@ -1,61 +1,25 @@
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import { usePosts, useKeywords, useMe } from '../apis/home/useHome';
+import Container from '@mui/material/Container';
+import AppAppBar from '../components/AppAppBar';
+import MainContent from '../components/MainContent';
+import Footer from '../components/Footer';
 
 export default function MainPage() {
-  const {
-    data: posts,
-    isLoading: postsLoading,
-  } = usePosts();
-  const {
-    data: keywords,
-    isLoading: keywordsLoading,
-  } = useKeywords();
-  const {
-    data: me,
-    isLoading: meLoading,
-  } = useMe();
-
-  const loading = postsLoading || keywordsLoading || meLoading;
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        안녕하세요, {me?.name}님
-      </Typography>
-
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          최신 게시물
-        </Typography>
-        <ul>
-          {posts?.map((post) => (
-            <li key={post.id}>{post.title}</li>
-          ))}
-        </ul>
-      </Box>
-
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          추천 키워드
-        </Typography>
-        <ul>
-          {keywords?.map((keyword) => (
-            <li key={keyword.id}>{keyword.name}</li>
-          ))}
-        </ul>
-      </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <AppAppBar />
+      <Container
+        component="main"
+        maxWidth="lg"
+        sx={{
+          flex: 1,
+          py: { xs: 4, sm: 6, md: 8 },
+          mt: 'var(--template-frame-height, 0px)',
+        }}
+      >
+        <MainContent />
+      </Container>
+      <Footer />
     </Box>
   );
 }
-
-

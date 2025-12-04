@@ -1,7 +1,10 @@
+export type Role = 'GUEST' | 'USER' | 'ADMIN' | string;
+
 export type GuestLoginResponse = {
   accessToken: string;
   refreshToken: string;
   expiredAt: string;
+  role: Role;
 };
 
 export const LoginRouter = {

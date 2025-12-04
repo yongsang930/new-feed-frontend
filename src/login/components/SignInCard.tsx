@@ -6,6 +6,7 @@ import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useGuestLogin } from '../../app/apis/account/useLogin';
 import type { GuestLoginResponse } from '../../app/apis/account/LoginRouter';
+import { useMessage } from '../../app/hooks/useMessage';
 import { GoogleIcon, SitemarkIcon, GitIcon } from './CustomIcons';
 
 const Card = styled(MuiCard)(({ theme }) => ({
@@ -28,17 +29,19 @@ const Card = styled(MuiCard)(({ theme }) => ({
 
 export default function SignInCard() {
   const navigate = useNavigate();
+  const message = useMessage();
   const { mutate: signInAsGuest, isPending } = useGuestLogin({
     onSuccess: (data: GuestLoginResponse) => {
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
-      alert('Guest 로그인 성공');
-      console.info('Guest 로그인 응답', data);
+      localStorage.setItem('userRole', data.role);
+      message.success('Guest 로그인 성공');
+      console.log('Guest 로그인 응답', data);
       navigate('/main');
     },
     onError: (error: unknown) => {
       console.error('Guest 로그인 실패', error);
-      alert('게스트 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      message.error('게스트 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
     },
   });
 
@@ -63,7 +66,7 @@ export default function SignInCard() {
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => alert('구글 계정으로 로그인')}
+          onClick={() => message.info('구글 계정으로 로그인')}
           startIcon={<GoogleIcon />}
         >
           구글 계정으로 로그인
@@ -71,7 +74,7 @@ export default function SignInCard() {
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => alert('Github 계정으로 로그인')}
+          onClick={() => message.info('Github 계정으로 로그인')}
           startIcon={<GitIcon />}
         >
           Github 계정으로 로그인

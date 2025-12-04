@@ -8,4 +8,7 @@ export default defineConfig({
     host: '0.0.0.0',   // 이 한 줄만 있으면 내부 IP 접근 가능
     port: 5173,
   },
+  build: {
+    outDir: 'dist',
+  },
 })
