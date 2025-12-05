@@ -1,9 +1,17 @@
 import { Box, Typography } from '@mui/material';
 import RssFeedRoundedIcon from '@mui/icons-material/RssFeedRounded';
+import { useNavigate } from 'react-router-dom';
 
 export default function SitemarkIcon() {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate('/main');
+  };
+
   return (
     <Box
+      onClick={handleClick}
       sx={{
         display: 'flex',
         alignItems: 'center',

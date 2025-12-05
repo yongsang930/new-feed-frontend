@@ -43,10 +43,10 @@ apiClient.interceptors.response.use(
       // 전역 메시지 API 사용 (MessageContextProvider가 마운트된 경우)
       const messageApi = (window as any).__messageApi;
       if (messageApi) {
-        messageApi.error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.\n\n서버 주소: ' + import.meta.env.VITE_API_BASE_URL);
+        messageApi.error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
       } else {
         // MessageContextProvider가 아직 마운트되지 않은 경우 fallback
-        console.error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.\n\n서버 주소: ' + import.meta.env.VITE_API_BASE_URL);
+        console.error('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
       }
     } else if (error.response) {
       // 서버 응답은 있지만 에러 상태 코드

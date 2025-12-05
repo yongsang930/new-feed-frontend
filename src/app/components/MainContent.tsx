@@ -216,9 +216,11 @@ const StyledTitleTypography = styled(Typography)(({ theme }) => ({
   hyphens: 'none',
   boxSizing: 'border-box',
   wordWrap: 'break-word',
-  fontWeight: 700,
+  fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontWeight: 600,
   fontSize: '1.125rem',
-  lineHeight: 1.4,
+  lineHeight: 1.5,
+  letterSpacing: '-0.01em',
   color: (theme.vars || theme).palette.text.primary,
   marginBottom: '8px',
   // Typography 기본 스타일 오버라이드
@@ -462,7 +464,7 @@ const GUEST_KEYWORDS_STORAGE_KEY = 'guestSelectedKeywords';
 
 export default function MainContent() {
   const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(null);
-  const [paginationPage, setPaginationPage] = React.useState(1); // 페이징 페이지 (page 1부터 시작, 30개 이후)
+  const [paginationPage, setPaginationPage] = React.useState(0); // 페이징 페이지 (백엔드는 page 0부터 시작)
   const guestMode = isGuest(); // Role로 게스트 여부 판단
   
   // 게스트일 때만 로컬스토리지에서 키워드 가져오기
@@ -569,7 +571,8 @@ export default function MainContent() {
   const displayedCards = paginationCards;
 
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-    setPaginationPage(value);
+    // value는 UI 페이지 번호 (1부터 시작), 백엔드는 0부터 시작하므로 -1
+    setPaginationPage(value - 1);
     // 페이지 변경 시 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -616,10 +619,11 @@ export default function MainContent() {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: LAYOUT_CONFIG.sectionGap }}>
         <div>
-          <Typography variant="h1" gutterBottom>
+          <Typography variant="h2" gutterBottom>
           News Feed
           </Typography>
-          <Typography>Stay in the loop with the latest about our products</Typography>
+          <Typography>최신 IT 뉴스와 기술 트렌드를 편리하게 확인할 수 있는 개인화된 뉴스 피드입니다.
+          </Typography>
         </div>
         <Typography variant="body1" color="text.secondary">
           게시물이 없습니다.
