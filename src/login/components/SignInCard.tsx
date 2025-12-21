@@ -1,3 +1,4 @@
+import * as React from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import MuiCard from '@mui/material/Card';
@@ -7,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGuestLogin } from '../../app/apis/account/useLogin';
 import type { GuestLoginResponse } from '../../app/apis/account/LoginRouter';
 import { useMessage } from '../../app/hooks/useMessage';
-import { GoogleIcon, SitemarkIcon, GitIcon } from './CustomIcons';
+import { GoogleIcon, GitIcon } from './CustomIcons';
+import SitemarkIcon from '../../app/components/SitemarkIcon';
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -30,13 +32,19 @@ const Card = styled(MuiCard)(({ theme }) => ({
 export default function SignInCard() {
   const navigate = useNavigate();
   const message = useMessage();
+  
+  // 로컬스토리지에 토큰이 있는지 확인
+  const hasToken = React.useMemo(() => {
+    return !!localStorage.getItem('accessToken');
+  }, []);
+  
   const { mutate: signInAsGuest, isPending } = useGuestLogin({
     onSuccess: (data: GuestLoginResponse) => {
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('userRole', data.role);
       message.success('Guest 로그인 성공');
-      console.log('Guest 로그인 응답', data);
+      // 보안: 토큰 정보는 콘솔에 출력하지 않음
       navigate('/main');
     },
     onError: (error: unknown) => {
@@ -46,7 +54,16 @@ export default function SignInCard() {
   });
 
   const handleGuestLogin = () => {
+    if (hasToken) {
+      // 토큰이 있으면 메인으로 이동
+      navigate('/main');
+      return;
+    }
     signInAsGuest();
+  };
+  
+  const handleGoToMain = () => {
+    navigate('/main');
   };
 
   return (
@@ -57,8 +74,15 @@ export default function SignInCard() {
       <Typography
         component="h1"
         variant="h4"
-        sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}
-        style={{lineHeight : '2.5'}}
+        sx={{ 
+          width: '100%', 
+          fontSize: 'clamp(2rem, 10vw, 2.15rem)',
+          fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+          lineHeight: 1.3,
+          color: 'text.primary',
+        }}
       >
         로그인
       </Typography>
@@ -66,27 +90,108 @@ export default function SignInCard() {
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => message.info('구글 계정으로 로그인')}
+          disabled
           startIcon={<GoogleIcon />}
+          sx={{
+            fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+            fontWeight: 500,
+            fontSize: '0.9375rem',
+            letterSpacing: '-0.01em',
+            py: 1.5,
+            textTransform: 'none',
+            borderRadius: 2,
+            opacity: 0.5,
+            '& .MuiButton-startIcon': {
+              opacity: 0.5,
+            },
+            '& .MuiButton-label': {
+              textDecoration: 'line-through',
+            },
+          }}
         >
           구글 계정으로 로그인
         </Button>
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => message.info('Github 계정으로 로그인')}
+          disabled
           startIcon={<GitIcon />}
+          sx={{
+            fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+            fontWeight: 500,
+            fontSize: '0.9375rem',
+            letterSpacing: '-0.01em',
+            py: 1.5,
+            textTransform: 'none',
+            borderRadius: 2,
+            opacity: 0.5,
+            '& .MuiButton-startIcon': {
+              opacity: 0.5,
+            },
+            '& .MuiButton-label': {
+              textDecoration: 'line-through',
+            },
+          }}
         >
           Github 계정으로 로그인
         </Button>
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={handleGuestLogin}
-          disabled={isPending}
-        >
-          {isPending ? '로그인 중...' : 'Guest로 로그인'}
-        </Button>
+        {hasToken ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              alignItems: 'center',
+              py: 2,
+            }}
+          >
+            <Typography
+              variant="body1"
+              sx={{
+                fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+                fontWeight: 500,
+                color: 'text.secondary',
+                textAlign: 'center',
+              }}
+            >
+              이미 로그인되어 있습니다
+            </Typography>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleGoToMain}
+              sx={{
+                fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+                fontWeight: 500,
+                fontSize: '0.9375rem',
+                letterSpacing: '-0.01em',
+                py: 1.5,
+                textTransform: 'none',
+                borderRadius: 2,
+              }}
+            >
+              메인으로 이동
+            </Button>
+          </Box>
+        ) : (
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleGuestLogin}
+            disabled={isPending}
+            sx={{
+              fontFamily: '"Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+              fontWeight: 500,
+              fontSize: '0.9375rem',
+              letterSpacing: '-0.01em',
+              py: 1.5,
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
+          >
+            {isPending ? '로그인 중...' : 'Guest로 로그인'}
+          </Button>
+        )}
       </Box>
     </Card>
   );

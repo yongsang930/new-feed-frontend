@@ -93,21 +93,13 @@ export default function KeywordSelectDialog({ open, onClose }: KeywordSelectDial
           newSet.add(keywordId);
         }
         
-        // 게스트 모드: 로컬스토리지에 즉시 저장/삭제
-        if (guestMode) {
-          const idsArray = Array.from(newSet);
-          if (idsArray.length > 0) {
-            localStorage.setItem(GUEST_KEYWORDS_STORAGE_KEY, JSON.stringify(idsArray));
-          } else {
-            // 선택된 키워드가 없으면 로컬스토리지에서 삭제
-            localStorage.removeItem(GUEST_KEYWORDS_STORAGE_KEY);
-          }
-        }
+        // 로컬스토리지 저장은 완료 버튼 클릭 시에만 수행
+        // 여기서는 상태만 업데이트
         
         return newSet;
       });
     };
-  }, [guestMode]);
+  }, []);
 
   const handleComplete = () => {
     const keywordIdsArray = Array.from(selectedKeywordIds);
@@ -132,8 +124,11 @@ export default function KeywordSelectDialog({ open, onClose }: KeywordSelectDial
       // 인증된 사용자: 서버에 저장
       updateKeywords(keywordIdsArray, {
         onSuccess: () => {
-          // 키워드 업데이트 후 posts 재조회 (useUpdateUserKeywords에서 이미 invalidateQueries 호출하지만 확실히 하기 위해)
+          // 키워드 업데이트 후 keywords와 posts 모두 재조회
+          // keywords를 먼저 refetch하여 selectedKeywords가 올바르게 계산되도록 함
+          queryClient.invalidateQueries({ queryKey: ['keywords'] });
           queryClient.invalidateQueries({ queryKey: ['posts'] });
+          queryClient.invalidateQueries({ queryKey: ['userKeywords'] });
           onClose();
         },
       });
@@ -173,32 +168,38 @@ export default function KeywordSelectDialog({ open, onClose }: KeywordSelectDial
               py: 2,
             }}
           >
-            {keywords.map((keyword: Keyword) => {
-              const isSelected = selectedKeywordIds.has(keyword.keywordId);
-              // 한글 이름 우선, 없으면 영어 이름 사용
-              const displayName = keyword.koName || keyword.enName || 'Unknown';
-              
-              return (
-                <Chip
-                  key={keyword.keywordId}
-                  label={displayName}
-                  onClick={handleKeywordToggle(keyword.keywordId)}
-                  color={isSelected ? 'primary' : 'default'}
-                  variant={isSelected ? 'filled' : 'outlined'}
-                  sx={{
-                    height: 40,
-                    fontSize: '0.875rem',
-                    fontWeight: isSelected ? 600 : 400,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: isSelected
-                        ? 'primary.dark'
-                        : 'action.hover',
-                    },
-                  }}
-                />
-              );
-            })}
+            {keywords
+              .filter((keyword: Keyword) => {
+                // isActive가 undefined이거나 true인 경우 표시 (기존 키워드는 isActive 필드가 없을 수 있음)
+                // 추천 키워드는 isActive가 false로 설정되므로 제외됨
+                return keyword.isActive !== false;
+              })
+              .map((keyword: Keyword) => {
+                const isSelected = selectedKeywordIds.has(keyword.keywordId);
+                // 영문(en_name) 우선, 없으면 한글 이름 사용
+                const displayName = keyword.enName || keyword.koName || 'Unknown';
+                
+                return (
+                  <Chip
+                    key={keyword.keywordId}
+                    label={displayName}
+                    onClick={handleKeywordToggle(keyword.keywordId)}
+                    color={isSelected ? 'primary' : 'default'}
+                    variant={isSelected ? 'filled' : 'outlined'}
+                    sx={{
+                      height: 40,
+                      fontSize: '0.875rem',
+                      fontWeight: isSelected ? 600 : 400,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: isSelected
+                          ? 'primary.dark'
+                          : 'action.hover',
+                      },
+                    }}
+                  />
+                );
+              })}
           </Box>
         )}
       </DialogContent>

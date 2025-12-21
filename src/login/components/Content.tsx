@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { SitemarkIcon } from './CustomIcons';
+import SitemarkIcon from '../../app/components/SitemarkIcon';
 
 // 교체를 원하는 아이콘 import
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';

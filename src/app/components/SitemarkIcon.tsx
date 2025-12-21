@@ -1,12 +1,10 @@
 import { Box, Typography } from '@mui/material';
 import RssFeedRoundedIcon from '@mui/icons-material/RssFeedRounded';
-import { useNavigate } from 'react-router-dom';
 
 export default function SitemarkIcon() {
-  const navigate = useNavigate();
-
   const handleClick = () => {
-    navigate('/main');
+    // 메인으로 강제 새로고침하여 페이지/필터 상태 초기화
+    window.location.href = '/main';
   };
 
   return (

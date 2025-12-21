@@ -4,7 +4,7 @@ import SignInCard from './components/SignInCard';
 import Content from './components/Content';
 import ColorModeSelect from '../app/theme/ColorModeSelect';
 
-export default function SignInSide(props: { disableCustomTheme?: boolean }) {
+export default function SignInSide(_: { disableCustomTheme?: boolean }) {
   return (<>
       <CssBaseline enableColorScheme />
       <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />

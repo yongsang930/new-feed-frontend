@@ -32,7 +32,7 @@ export const usePostsInfinite = (keywordIds?: number[]) => {
 export const usePostsPaginated = (page: number, size: number, keywordIds?: number[]) => {
   return useQuery({
     queryKey: ['posts', 'paginated', page, size, keywordIds],
-    queryFn: () => RestHomeRouter.getPosts(page, size, keywordIds),
+    queryFn: () => RestHomeRouter.getPostsWithPagination(page, size, keywordIds),
   });
 };
 
@@ -60,24 +60,20 @@ export const useUpdateUserKeywords = () => {
   
   return useMutation({
     mutationFn: RestHomeRouter.updateUserKeywords,
-    onSuccess: () => {
-      // 키워드 업데이트 후 posts 및 keywords 재조회
+    onSuccess: async () => {
+      // 키워드 업데이트 후 keywords를 먼저 refetch하여 selectedKeywords가 올바르게 계산되도록 함
+      await queryClient.refetchQueries({ queryKey: ['keywords'] });
+      // 그 다음 posts와 userKeywords 무효화 및 재조회
       queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['keywords'] });
       queryClient.invalidateQueries({ queryKey: ['userKeywords'] });
     },
   });
 };
 
 export const useRecommendKeywords = () => {
-  const queryClient = useQueryClient();
-  
+  // 추천 키워드는 관리자 검토 후 활성화되므로 keywords 목록을 즉시 갱신하지 않음
   return useMutation({
     mutationFn: RestHomeRouter.recommendKeywords,
-    onSuccess: () => {
-      // 추천 키워드 추가 후 keywords 재조회
-      queryClient.invalidateQueries({ queryKey: ['keywords'] });
-    },
   });
 };
 

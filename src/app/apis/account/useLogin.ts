@@ -16,4 +16,16 @@ export const useGuestLogin = (options?: UseGuestLoginOptions) => {
   });
 };
 
+type UseLogoutOptions = UseMutationOptions<
+  void,
+  unknown,
+  string
+>;
+
+export const useLogout = (options?: UseLogoutOptions) => {
+  return useMutation({
+    mutationFn: RestLoginRouter.logout,
+    ...options,
+  });
+};
 

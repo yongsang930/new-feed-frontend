@@ -33,10 +33,9 @@ export default function Footer() {
             <Link 
               color="text.secondary" 
               variant="body2" 
-              href="mailto:yongsang930@naver.com"
               sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
             >
-              yongsang930@naver.com
+              E-mail: yongsang930@naver.com
             </Link>
           </div>
           <Stack
@@ -48,7 +47,7 @@ export default function Footer() {
             <IconButton
               color="inherit"
               size="small"
-              href="https://github.com/yongsang930"
+              href="https://github.com/yongsang930/new-feed-backend"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub"
@@ -74,6 +73,26 @@ export default function Footer() {
               <img 
                 src="https://t1.daumcdn.net/tistory_admin/top_v2/tistory-apple-touch-favicon.png" 
                 alt="Tistory Blog"
+              />
+            </IconButton>
+            <IconButton
+              component="a"
+              href="https://www.notion.so/RSS-IT-v-1-0-2d04f9e9a000819b8e5dfb88f0b02318"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Notion"
+              sx={{ 
+                alignSelf: 'center',
+                padding: '8px',
+                '& img': {
+                  width: 24,
+                  height: 24,
+                }
+              }}
+            >
+              <img 
+                src="https://www.notion.so/images/logo-ios.png" 
+                alt="Notion"
               />
             </IconButton>
           </Stack>

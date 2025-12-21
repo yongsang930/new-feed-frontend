@@ -12,7 +12,9 @@ import { useNavigate } from 'react-router-dom';
 import Sitemark from './SitemarkIcon';
 import KeywordSelectDialog from './KeywordSelectDialog';
 import KeywordRecommendDialog from './KeywordRecommendDialog';
+import ProjectDescriptionDialog from './ProjectDescriptionDialog';
 import ColorModeSelect from '../theme/ColorModeSelect';
+import { useLogout } from '../apis/account/useLogin';
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   display: 'flex',
@@ -35,6 +37,7 @@ export default function AppAppBar() {
   const [open, setOpen] = React.useState(false);
   const [keywordDialogOpen, setKeywordDialogOpen] = React.useState(false);
   const [recommendDialogOpen, setRecommendDialogOpen] = React.useState(false);
+  const [projectDescriptionDialogOpen, setProjectDescriptionDialogOpen] = React.useState(false);
 
   const toggleDrawer = (newOpen: boolean) => () => {
     setOpen(newOpen);
@@ -48,15 +51,57 @@ export default function AppAppBar() {
     setRecommendDialogOpen(true);
   };
 
+  const handleProjectDescriptionButtonClick = () => {
+    setProjectDescriptionDialogOpen(true);
+  };
+
+  const { mutate: logout } = useLogout({
+    onSuccess: () => {
+      // 로컬스토리지에서 모든 인증 정보 및 게스트 키워드 삭제
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('guestSelectedKeywords');
+      // userId 또는 guestUUID가 있다면 삭제 (선택사항)
+      localStorage.removeItem('userId');
+      localStorage.removeItem('guestUUID');
+      // 로그인 화면으로 이동
+      navigate('/login');
+      // Drawer가 열려있으면 닫기
+      setOpen(false);
+    },
+    onError: (error) => {
+      console.error('로그아웃 실패', error);
+      // 에러가 발생해도 로컬스토리지는 삭제하고 로그인 화면으로 이동
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('guestSelectedKeywords');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('guestUUID');
+      navigate('/login');
+      setOpen(false);
+    },
+  });
+
   const handleLogout = () => {
-    // localStorage에서 토큰 및 Role 제거
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userRole');
-    // 로그인 화면으로 이동
-    navigate('/login');
-    // Drawer가 열려있으면 닫기
-    setOpen(false);
+    // 1) 로컬스토리지에서 refreshToken 가져오기
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (refreshToken) {
+      // 2) 백엔드 Logout API 호출
+      logout(refreshToken);
+    } else {
+      // refreshToken이 없으면 로컬스토리지만 삭제하고 이동
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('guestSelectedKeywords');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('guestUUID');
+      navigate('/login');
+      setOpen(false);
+    }
   };
 
   return (
@@ -95,9 +140,9 @@ export default function AppAppBar() {
                 variant="text"
                 color="info"
                 size="small"
-                onClick={handleRecommendButtonClick}
+                onClick={handleProjectDescriptionButtonClick}
               >
-                설계 내용
+                프로젝트 산출물(작업중)
               </Button>
             </Box>
           </Box>
@@ -144,6 +189,10 @@ export default function AppAppBar() {
           <KeywordRecommendDialog
             open={recommendDialogOpen}
             onClose={() => setRecommendDialogOpen(false)}
+          />
+          <ProjectDescriptionDialog
+            open={projectDescriptionDialogOpen}
+            onClose={() => setProjectDescriptionDialogOpen(false)}
           />
         </AppBar>
       );

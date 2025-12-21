@@ -1,3 +1,4 @@
+import * as React from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import AppAppBar from '../components/AppAppBar';
@@ -5,6 +6,11 @@ import MainContent from '../components/MainContent';
 import Footer from '../components/Footer';
 
 export default function MainPage() {
+  // 페이지 로드 시 스크롤을 최상단으로 이동
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppAppBar />

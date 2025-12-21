@@ -27,6 +27,8 @@ type RawKeyword = {
   keyword_id: number;
   en_name: string;
   ko_name: string;
+  active?: boolean; // 백엔드에서 active로 반환
+  is_active?: boolean; // 호환성을 위해 유지
   selected?: boolean;
 };
 
@@ -35,6 +37,7 @@ export type Keyword = {
   keywordId: number;
   enName: string;
   koName: string;
+  isActive?: boolean;
   selected?: boolean;
 };
 
@@ -84,6 +87,17 @@ type PaginatedResponse<T> = {
   empty: boolean;
 };
 
+// 페이지네이션 정보를 포함한 응답 타입
+export type PostsPaginatedResponse = {
+  content: Post[];
+  totalPages: number;
+  totalElements: number;
+  currentPage: number;
+  size: number;
+  last: boolean;
+  first: boolean;
+};
+
 export const RestHomeRouter = {
   getPosts: async (page: number = 0, size: number = 30, keywordIds?: number[]): Promise<Post[]> => {
     const { method, path } = HomeRouter.posts;
@@ -108,6 +122,46 @@ export const RestHomeRouter = {
     }
     return [];
   },
+  getPostsWithPagination: async (page: number = 0, size: number = 30, keywordIds?: number[]): Promise<PostsPaginatedResponse> => {
+    const { method, path } = HomeRouter.posts;
+    const params: Record<string, unknown> = {
+      page,
+      size,
+    };
+    
+    // keywordIds가 있으면 List<Long> 형태로 전달 (axios가 배열을 자동으로 처리)
+    if (keywordIds && keywordIds.length > 0) {
+      params.keywordIds = keywordIds;
+    }
+    
+    const { data } = await apiClient.request<ApiResponse<PaginatedResponse<Post>>>({
+      url: path,
+      method,
+      params,
+    });
+    
+    if (data.body) {
+      return {
+        content: Array.isArray(data.body.content) ? data.body.content : [],
+        totalPages: data.body.total_pages || 0,
+        totalElements: data.body.total_elements || 0,
+        currentPage: data.body.number || 0,
+        size: data.body.size || size,
+        last: data.body.last || false,
+        first: data.body.first || false,
+      };
+    }
+    
+    return {
+      content: [],
+      totalPages: 0,
+      totalElements: 0,
+      currentPage: page,
+      size,
+      last: true,
+      first: true,
+    };
+  },
   getKeywords: async (): Promise<Keyword[]> => {
     const { method, path } = HomeRouter.keywords;
     const { data } = await apiClient.request<ApiResponse<RawKeyword[]>>({
@@ -120,6 +174,8 @@ export const RestHomeRouter = {
       keywordId: raw.keyword_id,
       enName: raw.en_name,
       koName: raw.ko_name,
+      // 백엔드에서 active 또는 is_active로 반환할 수 있으므로 둘 다 확인
+      isActive: raw.active ?? raw.is_active,
       selected: raw.selected,
     }));
   },

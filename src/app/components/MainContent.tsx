@@ -4,6 +4,7 @@ import AvatarGroup from '@mui/material/AvatarGroup';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import Grid from '@mui/material/Grid';
@@ -49,7 +50,7 @@ const LAYOUT_CONFIG = {
   sectionGap: 4,
   authorPadding: 16,
   infiniteScrollLimit: 30, // 무한 스크롤 최대 개수
-  itemsPerPage: 30, // 페이징당 아이템 수 (30개씩)
+  itemsPerPage: 9, // 페이징당 아이템 수 (9개씩)
   initialDisplayCount: 6, // 초기 표시 개수
   loadMoreCount: 6, // 무한 스크롤 시 추가 로드 개수
 } as const;
@@ -64,6 +65,7 @@ type CardData = {
   authors: Array<{ name: string; avatar?: string }>;
   publishedAt?: string;
   region?: string;
+  keywordIds?: number[]; // Post에 연결된 키워드 ID 배열
 };
 
 // ==================== Styled Components ====================
@@ -370,9 +372,7 @@ function PostCard({
       tabIndex={0}
       className={isFocused ? 'Mui-focused' : ''}
       onMouseEnter={() => {
-        if (card.summary) {
-          setShowSummaryTooltip(true);
-        }
+        setShowSummaryTooltip(true);
       }}
       onMouseLeave={() => setShowSummaryTooltip(false)}
       sx={{ position: 'relative' }}
@@ -415,7 +415,7 @@ function PostCard({
               {card.link || 'No content'}
             </Typography>
           )}
-          {showSummaryTooltip && card.summary && (
+          {showSummaryTooltip && (
             <SummaryTooltipBox
               sx={{
                 position: 'absolute',
@@ -438,14 +438,20 @@ function PostCard({
               >
                 AI 요약 내용
               </Typography>
-              {summaryIsHtml ? (
-                <StyledHtmlTypography
-                  sx={{ fontSize: '0.75rem', color: 'white' }}
-                  dangerouslySetInnerHTML={{ __html: card.summary }}
-                />
+              {card.summary ? (
+                summaryIsHtml ? (
+                  <StyledHtmlTypography
+                    sx={{ fontSize: '0.75rem', color: 'white' }}
+                    dangerouslySetInnerHTML={{ __html: card.summary }}
+                  />
+                ) : (
+                  <Typography variant="caption" sx={{ whiteSpace: 'pre-wrap', color: 'white' }}>
+                    {card.summary}
+                  </Typography>
+                )
               ) : (
                 <Typography variant="caption" sx={{ whiteSpace: 'pre-wrap', color: 'white' }}>
-                  {card.summary}
+                  AI로 분석중입니다.
                 </Typography>
               )}
             </SummaryTooltipBox>
@@ -462,9 +468,13 @@ function PostCard({
 
 const GUEST_KEYWORDS_STORAGE_KEY = 'guestSelectedKeywords';
 
+type SortOption = 'latest' | 'oldest' | 'title';
+
 export default function MainContent() {
   const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(null);
   const [paginationPage, setPaginationPage] = React.useState(0); // 페이징 페이지 (백엔드는 page 0부터 시작)
+  const [selectedKeywordId, setSelectedKeywordId] = React.useState<number | 'all'>('all'); // 선택된 키워드 ID 또는 'all'
+  const [sortBy] = React.useState<SortOption>('latest');
   const guestMode = isGuest(); // Role로 게스트 여부 판단
   
   // 게스트일 때만 로컬스토리지에서 키워드 가져오기
@@ -472,10 +482,31 @@ export default function MainContent() {
   
   // 인증된 사용자의 선택한 키워드 가져오기
   const { data: keywords = [] } = useKeywords();
+  
+  // 선택된 키워드 목록 (필터 Chip으로 표시)
+  const selectedKeywords = React.useMemo(() => {
+    // 활성화된 키워드만 필터링 (isActive가 false가 아닌 것만)
+    const activeKeywords = keywords.filter((keyword) => keyword.isActive !== false);
+
+    if (guestMode) {
+      // 게스트 모드: 상태에 저장된 guestKeywordIds를 사용해 매칭
+      if (guestKeywordIds && guestKeywordIds.length > 0) {
+        return activeKeywords.filter((keyword) =>
+          guestKeywordIds.includes(keyword.keywordId)
+        );
+      }
+      return [];
+    }
+
+    // 인증된 사용자: selected === true인 키워드만
+    return activeKeywords.filter((keyword) => keyword.selected === true);
+  }, [keywords, guestMode, guestKeywordIds]);
+  
   const authenticatedKeywordIds = React.useMemo(() => {
     if (guestMode) return undefined;
+    // 활성화된 키워드 중에서 selected === true인 것만
     const selectedIds = keywords
-      .filter((keyword) => keyword.selected === true)
+      .filter((keyword) => keyword.isActive !== false && keyword.selected === true)
       .map((keyword) => keyword.keywordId);
     return selectedIds.length > 0 ? selectedIds : undefined;
   }, [keywords, guestMode]);
@@ -540,7 +571,6 @@ export default function MainContent() {
     isLoading: paginationLoading,
   } = usePostsPaginated(paginationPage, LAYOUT_CONFIG.itemsPerPage, keywordIdsToUse);
   
-  console.log(paginationData);
   const handleFocus = (index: number) => {
     setFocusedCardIndex(index);
   };
@@ -551,9 +581,9 @@ export default function MainContent() {
 
   // 페이징 데이터 변환
   const paginationCards: CardData[] = React.useMemo(() => {
-    if (!paginationData || !Array.isArray(paginationData)) return [];
+    if (!paginationData || !paginationData.content || !Array.isArray(paginationData.content)) return [];
     
-    return paginationData.map((post: Post) => ({
+    return paginationData.content.map((post: Post) => ({
       tag: post.tag || post.title || 'General',
       title: post.title || 'Untitled',
       content: post.content || post.description || '',
@@ -562,45 +592,107 @@ export default function MainContent() {
       authors: post.authors || [],
       publishedAt: post.published_at || post.createdAt,
       region: post.region,
+      keywordIds: post.keywords?.map((kw) => kw.keyword_id) || [], // Post에 연결된 키워드 ID 배열
     }));
   }, [paginationData]);
 
+  // 키워드별 게시물 개수 계산
+  const keywordPostCounts = React.useMemo(() => {
+    const counts: Record<number, number> = {};
+
+    // 현재 페이지의 카드 전체를 사용
+    paginationCards.forEach((card) => {
+      if (card.keywordIds && card.keywordIds.length > 0) {
+        card.keywordIds.forEach((keywordId) => {
+          counts[keywordId] = (counts[keywordId] || 0) + 1;
+        });
+      }
+    });
+
+    return counts;
+  }, [paginationCards, selectedKeywordId]);
+
+  // 게시물 0개인 키워드는 숨기고, 개수순으로 정렬
+  const filteredSelectedKeywords = React.useMemo(() => {
+    // 게시물 개수 0개는 제외
+    const filtered = selectedKeywords.filter((keyword) => {
+      const count = keywordPostCounts[keyword.keywordId] || 0;
+      return count > 0;
+    });
+
+    // 게시물 개수순으로 정렬 (내림차순: 많은 순서대로)
+    return filtered.sort((a, b) => {
+      const countA = keywordPostCounts[a.keywordId] || 0;
+      const countB = keywordPostCounts[b.keywordId] || 0;
+      return countB - countA;
+    });
+  }, [selectedKeywords, keywordPostCounts]);
+
   const isLoading = paginationLoading;
   
-  // 표시할 카드들 계산 - 페이징만 사용
-  const displayedCards = paginationCards;
-
+  // 필터링 및 정렬된 카드들 계산
+  const displayedCards = React.useMemo(() => {
+    let filtered = [...paginationCards];
+    
+    // 키워드 필터링
+    if (selectedKeywordId !== 'all') {
+      filtered = filtered.filter((card) => {
+        // Post의 keywordIds에 선택한 키워드 ID가 포함되어 있는지 확인
+        return card.keywordIds?.includes(selectedKeywordId as number) || false;
+      });
+    }
+    
+    // 정렬
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'latest':
+          // 최신순 (publishedAt 내림차순)
+          const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return dateB - dateA;
+        case 'oldest':
+          // 오래된순 (publishedAt 오름차순)
+          const dateAOld = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const dateBOld = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return dateAOld - dateBOld;
+        case 'title':
+          // 제목순 (알파벳 순)
+          return (a.title || '').localeCompare(b.title || '');
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [paginationCards, selectedKeywordId, sortBy]);
+  
+  // 필터 변경 핸들러
+  const handleKeywordClick = (keywordId: number | 'all') => {
+    setSelectedKeywordId(keywordId);
+  };
+  
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     // value는 UI 페이지 번호 (1부터 시작), 백엔드는 0부터 시작하므로 -1
     setPaginationPage(value - 1);
+    // 페이지 이동 시 필터 선택 해제 (모든 키워드)
+    setSelectedKeywordId('all');
     // 페이지 변경 시 상단으로 스크롤
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 총 페이지 수 계산
-  // 백엔드에서 총 개수를 알 수 없으므로, 현재 페이지에 데이터가 있으면 다음 페이지도 있다고 가정
-  const hasMorePaginationPages = paginationCards.length === LAYOUT_CONFIG.itemsPerPage;
+  // 백엔드에서 받은 총 페이지 수 사용 (UI는 1-based)
+  const totalPages = paginationData?.totalPages || 0;
+  const currentPageUI = paginationPage + 1; // 백엔드 page(0-based)를 UI page(1-based)로 변환
   
-  // 실제 최대 페이지 수 계산 (UI는 1부터 시작, 백엔드는 0부터 시작)
-  // 현재 페이지에 데이터가 있으면:
-  //   - 30개면 다음 페이지도 있을 수 있음 (paginationPage + 1 + 1 = paginationPage + 2)
-  //   - 30개 미만이면 현재 페이지가 마지막 (paginationPage + 1)
-  // 현재 페이지에 데이터가 없으면:
-  //   - 현재 페이지가 마지막 (paginationPage + 1)
-  const maxPageUI = paginationCards.length > 0 
-    ? (hasMorePaginationPages ? paginationPage + 2 : paginationPage + 1)
-    : paginationPage + 1; // 데이터가 없으면 현재 페이지가 마지막 (UI는 1부터 시작)
+  // 페이지 그룹 계산 (요구사항에 따른 정확한 계산)
+  // groupStart = Math.floor((currentPage - 1) / 10) * 10 + 1
+  // groupEnd = Math.min(groupStart + 9, totalPages)
+  const groupStart = Math.floor((currentPageUI - 1) / 10) * 10 + 1;
+  const groupEnd = Math.min(groupStart + 9, totalPages);
   
-  // 페이지 그룹 계산 (10개 단위) - UI는 1부터 시작
-  const PAGES_PER_GROUP = 10;
-  const currentPageUI = paginationPage + 1; // 백엔드 page를 UI page로 변환
-  const currentGroup = Math.ceil(currentPageUI / PAGES_PER_GROUP);
-  const startPage = (currentGroup - 1) * PAGES_PER_GROUP + 1;
-  // 그룹의 마지막 페이지와 실제 최대 페이지 중 작은 값 사용
-  const groupEndPage = currentGroup * PAGES_PER_GROUP;
-  const endPage = Math.min(groupEndPage, maxPageUI);
-  // 실제 존재하는 페이지만 표시
-  const totalPagesInGroup = Math.max(1, Math.min(PAGES_PER_GROUP, endPage - startPage + 1));
+  // 버튼 비활성화 조건
+  const isFirstPage = currentPageUI === 1;
+  const isLastPage = currentPageUI === totalPages;
 
   if (isLoading && paginationCards.length === 0) {
     return (
@@ -634,13 +726,97 @@ export default function MainContent() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: LAYOUT_CONFIG.sectionGap }}>
-      <div style={{ marginTop: '32px' }}>
-        <Typography variant="h3" gutterBottom>
-        Tech Blog
+      <Box sx={{ marginTop: '24px', mb: 3, textAlign: 'center' }}>
+        <Typography 
+          variant="h4" 
+          component="h1"
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.75rem',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            mb: 1.5,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: '-4px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '60px',
+              height: '3px',
+              background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '2px',
+            },
+          }}
+        >
+          Tech Blog
         </Typography>
-        <Typography>  최신 IT 뉴스와 기술 트렌드를 편리하게 확인할 수 있는 개인화된 뉴스 피드입니다.
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ 
+            fontSize: '0.95rem',
+            lineHeight: 1.7,
+            maxWidth: '600px',
+            mx: 'auto',
+          }}
+        >
+          최신 IT 뉴스와 기술 트렌드를 편리하게 확인할 수 있는 개인화된 뉴스 피드입니다.
         </Typography>
-      </div>
+      </Box>
+      
+      {/* 필터 및 정렬 */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* 키워드 필터 */}
+        {filteredSelectedKeywords.length > 0 && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 3,
+              pb: 1,
+            }}
+          >
+            <Chip 
+              onClick={() => handleKeywordClick('all')} 
+              size="medium" 
+              label="전체"
+              color={selectedKeywordId === 'all' ? 'primary' : 'default'}
+              variant={selectedKeywordId === 'all' ? 'filled' : 'outlined'}
+              sx={{
+                cursor: 'pointer',
+              }}
+            />
+            {filteredSelectedKeywords.map((keyword) => {
+              const isSelected = selectedKeywordId === keyword.keywordId;
+              // en_name 우선 표기
+              const displayName = keyword.enName || keyword.koName || 'Unknown';
+              const postCount = keywordPostCounts[keyword.keywordId] || 0;
+              const labelText = `${displayName}(${postCount})`;
+              return (
+                <Chip
+                  key={keyword.keywordId}
+                  onClick={() => handleKeywordClick(keyword.keywordId)}
+                  size="medium"
+                  label={labelText}
+                  color={isSelected ? 'primary' : 'default'}
+                  variant={isSelected ? 'filled' : 'outlined'}
+                  sx={{
+                    backgroundColor: isSelected ? undefined : 'transparent',
+                    border: isSelected ? undefined : 'none',
+                    cursor: 'pointer',
+                  }}
+                />
+              );
+            })}
+          </Box>
+        )}
+      </Box>
+      
       <Box
         sx={{
           display: { xs: 'flex', sm: 'none' },
@@ -669,25 +845,37 @@ export default function MainContent() {
         ))}
       </Grid>
       {/* 페이징 */}
-      {displayedCards.length > 0 && (
-        <Stack spacing={2} sx={{ alignItems: 'center', py: 4 }}>
+      {displayedCards.length > 0 && totalPages > 0 && (
+        <Stack spacing={2} sx={{ alignItems: 'center', py: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {/* 이전 그룹 버튼 */}
-            {currentGroup > 1 && (
-              <IconButton
-                onClick={() => {
-                  const prevGroupStartPage = (currentGroup - 2) * PAGES_PER_GROUP + 1;
-                  handlePageChange({} as React.ChangeEvent<unknown>, prevGroupStartPage);
-                }}
-                size="small"
-                sx={{ minWidth: '40px' }}
-              >
-                <Typography variant="body2">‹ 이전</Typography>
-              </IconButton>
-            )}
-            {/* 현재 그룹의 모든 페이지 번호 표시 (최대 페이지까지만) */}
-            {Array.from({ length: totalPagesInGroup }, (_, i) => startPage + i)
-              .filter((pageNum) => pageNum <= maxPageUI) // 최대 페이지까지만 표시
+            {/* 맨앞 버튼 « */}
+            <IconButton
+              onClick={() => {
+                handlePageChange({} as React.ChangeEvent<unknown>, 1);
+              }}
+              size="small"
+              sx={{ minWidth: '40px' }}
+              disabled={isFirstPage}
+              aria-label="맨앞 페이지"
+            >
+              <Typography variant="body2">«</Typography>
+            </IconButton>
+            
+            {/* 이전 버튼 ‹ */}
+            <IconButton
+              onClick={() => {
+                handlePageChange({} as React.ChangeEvent<unknown>, currentPageUI - 1);
+              }}
+              size="small"
+              sx={{ minWidth: '40px' }}
+              disabled={isFirstPage}
+              aria-label="이전 페이지"
+            >
+              <Typography variant="body2">‹</Typography>
+            </IconButton>
+            
+            {/* 페이지 번호 버튼 (groupStart ~ groupEnd) */}
+            {Array.from({ length: groupEnd - groupStart + 1 }, (_, i) => groupStart + i)
               .map((pageNum) => (
                 <IconButton
                   key={pageNum}
@@ -696,35 +884,52 @@ export default function MainContent() {
                   sx={{
                     minWidth: '40px',
                     height: '40px',
-                  backgroundColor: currentPageUI === pageNum ? 'primary.main' : 'transparent',
-                  color: currentPageUI === pageNum ? 'primary.contrastText' : 'text.primary',
-                  '&:hover': {
-                    backgroundColor: currentPageUI === pageNum ? 'primary.dark' : 'action.hover',
-                  },
-                }}
-              >
-                <Typography variant="body2" fontWeight={currentPageUI === pageNum ? 'bold' : 'normal'}>
-                  {pageNum}
-                </Typography>
-              </IconButton>
+                    backgroundColor: currentPageUI === pageNum ? 'primary.main' : 'transparent',
+                    color: currentPageUI === pageNum ? 'primary.contrastText' : 'text.primary',
+                    '&:hover': {
+                      backgroundColor: currentPageUI === pageNum ? 'primary.dark' : 'action.hover',
+                    },
+                    '&:disabled': {
+                      backgroundColor: currentPageUI === pageNum ? 'primary.main' : 'transparent',
+                    },
+                  }}
+                  aria-label={`페이지 ${pageNum}`}
+                >
+                  <Typography variant="body2" fontWeight={currentPageUI === pageNum ? 'bold' : 'normal'}>
+                    {pageNum}
+                  </Typography>
+                </IconButton>
               ))}
-            {/* 다음 그룹 버튼 - 실제로 다음 페이지가 있을 때만 표시 */}
-            {hasMorePaginationPages && currentPageUI < maxPageUI && (
-              <IconButton
-                onClick={() => {
-                  const nextGroupStartPage = currentGroup * PAGES_PER_GROUP + 1;
-                  handlePageChange({} as React.ChangeEvent<unknown>, nextGroupStartPage);
-                }}
-                size="small"
-                sx={{ minWidth: '40px' }}
-              >
-                <Typography variant="body2">다음 ›</Typography>
-              </IconButton>
-            )}
+            
+            {/* 다음 버튼 › */}
+            <IconButton
+              onClick={() => {
+                handlePageChange({} as React.ChangeEvent<unknown>, currentPageUI + 1);
+              }}
+              size="small"
+              sx={{ minWidth: '40px' }}
+              disabled={isLastPage}
+              aria-label="다음 페이지"
+            >
+              <Typography variant="body2">›</Typography>
+            </IconButton>
+            
+            {/* 맨뒤 버튼 » */}
+            <IconButton
+              onClick={() => {
+                handlePageChange({} as React.ChangeEvent<unknown>, totalPages);
+              }}
+              size="small"
+              sx={{ minWidth: '40px' }}
+              disabled={isLastPage}
+              aria-label="맨뒤 페이지"
+            >
+              <Typography variant="body2">»</Typography>
+            </IconButton>
           </Box>
           {/* 그룹 정보 표시 */}
           <Typography variant="body2" color="text.secondary">
-            {startPage}-{endPage} 페이지
+            {groupStart}-{groupEnd} 페이지
           </Typography>
         </Stack>
       )}

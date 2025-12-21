@@ -1,4 +1,5 @@
 import React, { createContext, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { message } from 'antd';
 import './MessageContext.scss';
 
@@ -15,7 +16,7 @@ interface MessageContextInterface {
 export const MessageContext = createContext<MessageContextInterface | undefined>(undefined);
 
 interface Props {
-  children: JSX.Element;
+  children: ReactNode;
 }
 
 export function MessageContextProvider({ children }: Props) {
